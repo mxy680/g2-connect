@@ -110,7 +110,7 @@ async function main() {
         containerID: 1,
         containerName: 'main',
         contentOffset: 0,
-        contentLength: content.length,
+        contentLength: 2000,
         content,
       })
     )
@@ -131,7 +131,7 @@ async function main() {
         containerID: 1,
         containerName: 'main',
         contentOffset: 0,
-        contentLength: content.length,
+        contentLength: 2000,
         content,
       })
     )
@@ -149,7 +149,7 @@ async function main() {
   }
 
   function startInterval(ms: number) {
-    if (intervalId) return
+    stopInterval()
     intervalId = setInterval(updateDisplay, ms)
   }
 
@@ -216,7 +216,7 @@ async function main() {
         }
       } else if (tmState === 'running') {
         if (isTap) {
-          timerRemainingMs -= Date.now() - startTime
+          timerRemainingMs = Math.max(0, timerRemainingMs - (Date.now() - startTime))
           tmState = 'paused'
           stopInterval()
           updateDisplay()
