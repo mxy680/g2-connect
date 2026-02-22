@@ -4,14 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build"
+    "dev": "cp index.html dist/ && esbuild src/main.ts --bundle --outdir=dist --format=esm --servedir=dist --watch",
+    "build": "cp index.html dist/ && esbuild src/main.ts --bundle --outdir=dist --format=esm --minify"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.7"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "esbuild": "^0.25.0"
   }
 }
