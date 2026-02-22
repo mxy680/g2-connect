@@ -128,24 +128,78 @@ async function main() {
       event.listEvent?.eventType ??
       event.sysEvent?.eventType
 
-    // Tap: start / pause / resume
-    if (eventType === OsEventTypeList.CLICK_EVENT || eventType === undefined) {
-      if (swState === 'idle' || swState === 'paused') {
-        startTime = Date.now()
-        swState = 'running'
-        startInterval(100)
-      } else {
-        accumulatedMs += Date.now() - startTime
-        swState = 'paused'
-        stopInterval()
-      }
-    }
+    const isTap = eventType === OsEventTypeList.CLICK_EVENT || eventType === undefined
+    const isDoubleTap = eventType === OsEventTypeList.DOUBLE_CLICK_EVENT
+    const isScrollUp = eventType === OsEventTypeList.SCROLL_TOP_EVENT
+    const isScrollDown = eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT
 
-    // Double-tap: reset (only when paused)
-    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT && swState === 'paused') {
-      accumulatedMs = 0
-      swState = 'idle'
-      updateDisplay()
+    if (appMode === 'stopwatch') {
+      if (isTap) {
+        if (swState === 'idle' || swState === 'paused') {
+          startTime = Date.now()
+          swState = 'running'
+          startInterval(100)
+        } else {
+          accumulatedMs += Date.now() - startTime
+          swState = 'paused'
+          stopInterval()
+        }
+      } else if (isDoubleTap) {
+        if (swState === 'paused') {
+          accumulatedMs = 0
+          swState = 'idle'
+          updateDisplay()
+        } else if (swState === 'idle') {
+          swState = 'idle'
+          accumulatedMs = 0
+          tmState = 'setting'
+          switchMode('timer')
+        }
+      }
+    } else {
+      // Timer mode
+      if (tmState === 'setting') {
+        if (isTap) {
+          timerRemainingMs = timerDurationMin * 60000
+          startTime = Date.now()
+          tmState = 'running'
+          startInterval(1000)
+        } else if (isDoubleTap) {
+          tmState = 'setting'
+          swState = 'idle'
+          accumulatedMs = 0
+          switchMode('stopwatch')
+        } else if (isScrollUp) {
+          timerDurationMin = Math.min(60, timerDurationMin + 1)
+          updateDisplay()
+        } else if (isScrollDown) {
+          timerDurationMin = Math.max(1, timerDurationMin - 1)
+          updateDisplay()
+        }
+      } else if (tmState === 'running') {
+        if (isTap) {
+          timerRemainingMs -= Date.now() - startTime
+          tmState = 'paused'
+          stopInterval()
+          updateDisplay()
+        }
+      } else if (tmState === 'paused') {
+        if (isTap) {
+          startTime = Date.now()
+          tmState = 'running'
+          startInterval(1000)
+        } else if (isDoubleTap) {
+          tmState = 'setting'
+          stopInterval()
+          updateDisplay()
+        }
+      } else if (tmState === 'done') {
+        if (isTap || isDoubleTap) {
+          stopInterval()
+          tmState = 'setting'
+          updateDisplay()
+        }
+      }
     }
   })
 }
