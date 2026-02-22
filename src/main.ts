@@ -77,6 +77,9 @@ async function main() {
     })
   }
 
+  let flashOn = true
+  let flashCount = 0
+
   const initialContent = buildPageContent()
   const result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
@@ -87,7 +90,42 @@ async function main() {
   status.textContent += `\nContainer created: ${result === 0 ? 'OK' : 'ERROR ' + result}`
 
   async function updateDisplay() {
+    if (appMode === 'timer' && tmState === 'running') {
+      const elapsed = Date.now() - startTime
+      timerRemainingMs = Math.max(0, timerRemainingMs - elapsed)
+      startTime = Date.now()
+      if (timerRemainingMs <= 0) {
+        timerRemainingMs = 0
+        tmState = 'done'
+        stopInterval()
+        flashOn = true
+        flashCount = 0
+        intervalId = setInterval(flashDisplay, 500)
+        return
+      }
+    }
     const content = buildPageContent()
+    await bridge.textContainerUpgrade(
+      new TextContainerUpgrade({
+        containerID: 1,
+        containerName: 'main',
+        contentOffset: 0,
+        contentLength: content.length,
+        content,
+      })
+    )
+  }
+
+  async function flashDisplay() {
+    flashCount++
+    if (flashCount > 20) {
+      stopInterval()
+      tmState = 'setting'
+      updateDisplay()
+      return
+    }
+    flashOn = !flashOn
+    const content = flashOn ? 'TIMER\n\n    00:00' : ' '
     await bridge.textContainerUpgrade(
       new TextContainerUpgrade({
         containerID: 1,
