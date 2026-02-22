@@ -1,0 +1,12 @@
+{
+  "package_id": "com.markshteyn.stopwatch",
+  "edition": "202602",
+  "name": "Stopwatch",
+  "version": "1.0.0",
+  "min_app_version": "0.1.0",
+  "tagline": "Simple stopwatch for G2",
+  "description": "A stopwatch app with tap to start/pause and double-tap to reset.",
+  "author": "Mark Shteyn",
+  "entrypoint": "index.html",
+  "permissions": {}
+}
