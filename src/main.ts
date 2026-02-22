@@ -1,17 +1,24 @@
 import {
   waitForEvenAppBridge,
   CreateStartUpPageContainer,
+  RebuildPageContainer,
   TextContainerProperty,
   TextContainerUpgrade,
   OsEventTypeList,
 } from '@evenrealities/even_hub_sdk'
 
-type State = 'idle' | 'running' | 'paused'
+type AppMode = 'stopwatch' | 'timer'
+type StopwatchState = 'idle' | 'running' | 'paused'
+type TimerState = 'setting' | 'running' | 'paused' | 'done'
 
-let state: State = 'idle'
+let appMode: AppMode = 'stopwatch'
+let swState: StopwatchState = 'idle'
+let tmState: TimerState = 'setting'
 let startTime = 0
 let accumulatedMs = 0
-let timerInterval: ReturnType<typeof setInterval> | null = null
+let timerDurationMin = 5
+let timerRemainingMs = 0
+let intervalId: ReturnType<typeof setInterval> | null = null
 
 function formatTime(ms: number): string {
   const totalTenths = Math.floor(ms / 100)
@@ -24,8 +31,15 @@ function formatTime(ms: number): string {
   return `${mm}:${ss}.${tenths}`
 }
 
+// Phone-side status for debugging
+const status = document.createElement('pre')
+status.style.cssText = 'font:16px monospace;padding:20px'
+status.textContent = 'Waiting for bridge...'
+document.body.appendChild(status)
+
 async function main() {
   const bridge = await waitForEvenAppBridge()
+  status.textContent += '\nBridge ready!'
 
   const text = new TextContainerProperty({
     containerID: 1,
@@ -38,15 +52,16 @@ async function main() {
     content: '00:00.0',
   })
 
-  await bridge.createStartUpPageContainer(
+  const result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
       containerTotalNum: 1,
       textObject: [text],
     })
   )
+  status.textContent += `\nContainer created: ${result === 0 ? 'OK' : 'ERROR ' + result}`
 
   async function updateDisplay() {
-    const elapsed = state === 'running'
+    const elapsed = swState === 'running'
       ? accumulatedMs + (Date.now() - startTime)
       : accumulatedMs
     const display = formatTime(elapsed)
@@ -62,14 +77,14 @@ async function main() {
   }
 
   function startTimer() {
-    if (timerInterval) return
-    timerInterval = setInterval(updateDisplay, 100)
+    if (intervalId) return
+    intervalId = setInterval(updateDisplay, 100)
   }
 
   function stopTimer() {
-    if (timerInterval) {
-      clearInterval(timerInterval)
-      timerInterval = null
+    if (intervalId) {
+      clearInterval(intervalId)
+      intervalId = null
     }
   }
 
@@ -81,21 +96,21 @@ async function main() {
 
     // Tap: start / pause / resume
     if (eventType === OsEventTypeList.CLICK_EVENT || eventType === undefined) {
-      if (state === 'idle' || state === 'paused') {
+      if (swState === 'idle' || swState === 'paused') {
         startTime = Date.now()
-        state = 'running'
+        swState = 'running'
         startTimer()
       } else {
         accumulatedMs += Date.now() - startTime
-        state = 'paused'
+        swState = 'paused'
         stopTimer()
       }
     }
 
     // Double-tap: reset (only when paused)
-    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT && state === 'paused') {
+    if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT && swState === 'paused') {
       accumulatedMs = 0
-      state = 'idle'
+      swState = 'idle'
       updateDisplay()
     }
   })
