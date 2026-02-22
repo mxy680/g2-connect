@@ -1,2 +1,7 @@
 node_modules/
 dist/
+.vite/
+
+# Claude artifacts
+CLAUDE.md
+docs/plans/
