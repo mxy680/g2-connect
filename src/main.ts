@@ -64,47 +64,58 @@ async function main() {
   const bridge = await waitForEvenAppBridge()
   status.textContent += '\nBridge ready!'
 
-  const text = new TextContainerProperty({
-    containerID: 1,
-    containerName: 'main',
-    xPosition: 0,
-    yPosition: 0,
-    width: 576,
-    height: 288,
-    isEventCapture: 1,
-    content: '00:00.0',
-  })
+  function makeTextContainer(content: string): TextContainerProperty {
+    return new TextContainerProperty({
+      containerID: 1,
+      containerName: 'main',
+      xPosition: 0,
+      yPosition: 0,
+      width: 576,
+      height: 288,
+      isEventCapture: 1,
+      content,
+    })
+  }
 
+  const initialContent = buildPageContent()
   const result = await bridge.createStartUpPageContainer(
     new CreateStartUpPageContainer({
       containerTotalNum: 1,
-      textObject: [text],
+      textObject: [makeTextContainer(initialContent)],
     })
   )
   status.textContent += `\nContainer created: ${result === 0 ? 'OK' : 'ERROR ' + result}`
 
   async function updateDisplay() {
-    const elapsed = swState === 'running'
-      ? accumulatedMs + (Date.now() - startTime)
-      : accumulatedMs
-    const display = formatStopwatch(elapsed)
+    const content = buildPageContent()
     await bridge.textContainerUpgrade(
       new TextContainerUpgrade({
         containerID: 1,
         containerName: 'main',
         contentOffset: 0,
-        contentLength: 7,
-        content: display,
+        contentLength: content.length,
+        content,
       })
     )
   }
 
-  function startTimer() {
-    if (intervalId) return
-    intervalId = setInterval(updateDisplay, 100)
+  async function switchMode(newMode: AppMode) {
+    appMode = newMode
+    const content = buildPageContent()
+    await bridge.rebuildPageContainer(
+      new RebuildPageContainer({
+        containerTotalNum: 1,
+        textObject: [makeTextContainer(content)],
+      })
+    )
   }
 
-  function stopTimer() {
+  function startInterval(ms: number) {
+    if (intervalId) return
+    intervalId = setInterval(updateDisplay, ms)
+  }
+
+  function stopInterval() {
     if (intervalId) {
       clearInterval(intervalId)
       intervalId = null
@@ -122,11 +133,11 @@ async function main() {
       if (swState === 'idle' || swState === 'paused') {
         startTime = Date.now()
         swState = 'running'
-        startTimer()
+        startInterval(100)
       } else {
         accumulatedMs += Date.now() - startTime
         swState = 'paused'
-        stopTimer()
+        stopInterval()
       }
     }
 
