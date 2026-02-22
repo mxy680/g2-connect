@@ -20,7 +20,7 @@ let timerDurationMin = 5
 let timerRemainingMs = 0
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-function formatTime(ms: number): string {
+function formatStopwatch(ms: number): string {
   const totalTenths = Math.floor(ms / 100)
   const tenths = totalTenths % 10
   const totalSeconds = Math.floor(totalTenths / 10)
@@ -29,6 +29,29 @@ function formatTime(ms: number): string {
   const mm = String(minutes).padStart(2, '0')
   const ss = String(seconds).padStart(2, '0')
   return `${mm}:${ss}.${tenths}`
+}
+
+function formatTimer(ms: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
+  const seconds = totalSeconds % 60
+  const minutes = Math.floor(totalSeconds / 60)
+  const mm = String(minutes).padStart(2, '0')
+  const ss = String(seconds).padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
+function buildPageContent(): string {
+  if (appMode === 'stopwatch') {
+    const elapsed = swState === 'running'
+      ? accumulatedMs + (Date.now() - startTime)
+      : accumulatedMs
+    return `SW\n\n    ${formatStopwatch(elapsed)}`
+  } else {
+    if (tmState === 'setting') {
+      return `TIMER\n\n    ${formatTimer(timerDurationMin * 60000)}`
+    }
+    return `TIMER\n\n    ${formatTimer(timerRemainingMs)}`
+  }
 }
 
 // Phone-side status for debugging
@@ -64,7 +87,7 @@ async function main() {
     const elapsed = swState === 'running'
       ? accumulatedMs + (Date.now() - startTime)
       : accumulatedMs
-    const display = formatTime(elapsed)
+    const display = formatStopwatch(elapsed)
     await bridge.textContainerUpgrade(
       new TextContainerUpgrade({
         containerID: 1,
